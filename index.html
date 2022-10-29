@@ -1,0 +1,170 @@
+<meta charset="utf-8">
+<div class="main">
+    <div>
+        <h1>WS</h1>
+        <input id="ws_req" placeholder="ws address" value="ws://backend:27800/php/server_run.php">
+        <button onclick="openWS()">connect</button>
+        <button onclick="closeWS()">disconnect</button>
+        <textarea id="ws_payload" placeholder="ws message" rows="10"></textarea>
+        <button onclick="sendWSMsg()">send to ws</button>
+        <div class="wsmsgs"></div>
+    </div>
+    <div>
+        <h1>GET</h1>
+        <input id="get_req" placeholder="get request">
+        <button onclick="sendGetResponse()">test get</button>
+    </div>
+    <div>
+        <h1>POST</h1>
+        <input id="post_req" placeholder="post request">
+        <textarea id="post_payload" placeholder="post payload" rows="10"></textarea>
+        <button onclick="sendPostResponse()">test post</button>
+    </div>
+    <div>
+        <div id="response"></div>
+    </div>
+</div>
+<style>
+    body {
+        background-color: #333;
+        color: #ffe;
+    }
+    .main {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    input, textarea {
+        width: 100%;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid #000;
+        background-color: #222;
+        color: #ffe;
+    }
+    .main > div {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+    h1, h2 {
+        margin: 0;
+    }
+    button {
+        width: 100%;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid #000;
+        background-color: #222;
+        color: #ffe;
+    }
+    #response {
+        padding: 10px;
+        border-radius: 10px;
+        border: 3px solid #fff;
+        box-sizing: border-box;
+        width: 100%;
+    }
+    .wsmsgs {
+        width: 100%;
+        overflow-y: auto;
+        height: 250px;
+        background-color: #222;
+    }
+    .wsmsg {
+        width: 100%;
+        word-break: break-all;
+    }
+    .connected {
+        background-color: #07f4;
+    }
+    .disconnected {
+        background-color: #ff04;
+    }
+    .error {
+        background-color: #f004;
+    }
+    .sent {
+        background-color: #a0f2;
+    }
+    .recieved {
+        background-color: #f0a2;
+    }
+</style>
+<script>
+    function createElement(tag, attributes = {}, content = '') {
+        attributes = new Map(Object.entries(attributes));
+        let el = document.createElement(tag);
+        attributes.forEach((e, i) => el.setAttribute(i, e));
+        if(typeof content === 'string' || content instanceof String) el.innerHTML = content;
+        else el.insertAdjacentElement('afterbegin', content);
+        return el;
+    }
+    const $ = (q) => {return document.querySelector(q)};
+    const getreq = $('#get_req'),
+          postreq = $('#post_req'),
+          postpayload = $('#post_payload'),
+          response = $('#response');
+    async function sendGetResponse() {
+        try {
+            response.innerHTML = await fetch(getreq.value).then(r=>{return r.text();});
+        } catch (e) {
+            response.innerHTML = e.toString();
+        }
+    }
+    async function sendPostResponse() {
+        try {
+            response.innerHTML = await fetch(postreq.value, {
+                method: "post",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: postpayload.value
+            }).then(r=>{return r.text();});
+        } catch (e) {
+            response.innerHTML = e.toString();
+        }
+    }
+    window.onbeforeunload = (event) => { return "unload?" };
+    let ws;
+    function openWS() {
+        if(ws!==undefined && ws.readyState != 3) closeWS();
+        let addr = $('#ws_req').value;
+        ws = new WebSocket(addr);
+        ws.onopen = (()=>{addWSMsg('connected', addr)});
+        ws.onclose = (()=>{addWSMsg('disconnected', addr)});
+        ws.onerror = (()=>{addWSMsg('error', addr)});
+        ws.onmessage = ((msg)=>{ addWSMsg('recieved', msg['data']) })
+    }
+    function closeWS() {
+        if(ws === undefined || ws.readyState==3) {
+            addWSMsg('error', 'already closed');
+            return;
+        }
+        ws.close();
+    }
+    function sendWSMsg() {
+        if (ws==undefined) {
+            addWSMsg('error', 'ws is not opened');
+            return;
+        }
+        if(ws.readyState==3) {
+            addWSMsg('error', 'ws is closed');
+            return;
+        }
+        ws.send($('#ws_payload').value);
+        addWSMsg('sent', $('#ws_payload').value);
+    }
+    function addWSMsg(type, payload) {
+        $('.wsmsgs').insertAdjacentElement('afterbegin', createWSMsgEl(type, payload));
+    }
+    function createWSMsgEl(type, payload) {
+        if(type == 'sent') return createElement('div', {'class': 'wsmsg sent'}, '<b>🠑</b>: '+payload);
+        if(type == 'recieved') return createElement('div', {'class': 'wsmsg recieved'}, '<b>🠓</b>: '+payload);
+        if(type == 'connected') return createElement('div', {'class': 'wsmsg connected'}, '<b>+</b>: '+payload);
+        if(type == 'disconnected') return createElement('div', {'class': 'wsmsg disconnected'}, '<b>-</b>: '+payload);
+        if(type == 'error') return createElement('div', {'class': 'wsmsg error'}, '<b>!</b>: '+payload);
+        throw('bad wsmsg type');
+    }
+</script>
