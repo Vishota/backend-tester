@@ -12,13 +12,13 @@
     <div>
         <h1>GET</h1>
         <input id="get_req" placeholder="get request">
-        <button onclick="sendGetResponse()">test get</button>
+        <button onclick="sendGetRequest()">test get</button>
     </div>
     <div>
         <h1>POST</h1>
         <input id="post_req" placeholder="post request">
         <textarea id="post_payload" placeholder="post payload" rows="10"></textarea>
-        <button onclick="sendPostResponse()">test post</button>
+        <button onclick="sendPostRequest()">test post</button>
     </div>
     <div>
         <div id="response"></div>
@@ -105,14 +105,14 @@
           postreq = $('#post_req'),
           postpayload = $('#post_payload'),
           response = $('#response');
-    async function sendGetResponse() {
+    async function sendGetRequest() {
         try {
             response.innerHTML = await fetch(getreq.value).then(r=>{return r.text();});
         } catch (e) {
             response.innerHTML = e.toString();
         }
     }
-    async function sendPostResponse() {
+    async function sendPostRequest() {
         try {
             response.innerHTML = await fetch(postreq.value, {
                 method: "post",
@@ -120,7 +120,7 @@
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
-                body: postpayload.value
+                body: JSON.stringify(JSON.parse(postpayload.value))
             }).then(r=>{return r.text();});
         } catch (e) {
             response.innerHTML = e.toString();
